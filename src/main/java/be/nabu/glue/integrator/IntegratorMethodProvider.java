@@ -23,7 +23,6 @@ import be.nabu.glue.api.MethodDescription;
 import be.nabu.glue.api.MethodProvider;
 import be.nabu.glue.api.ParameterDescription;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
-import be.nabu.glue.impl.SimpleMethodDescription;
 import be.nabu.glue.xml.XMLMethods;
 import be.nabu.libs.evaluator.EvaluationException;
 import be.nabu.libs.evaluator.api.Operation;
@@ -34,14 +33,12 @@ public class IntegratorMethodProvider implements MethodProvider {
 
 	private static Map<String, Map<String, MethodDescription>> methods = new HashMap<String, Map<String, MethodDescription>>();
 	
-	public static final boolean FULL_NAME_ONLY = Boolean.parseBoolean(System.getProperty("glue.integrator.fullNameOnly", "true"));
-	
 	@Override
 	public Operation<ExecutionContext> resolve(String name) {
 		Map<String, MethodDescription> methods = getMethodMap();
 		if (methods.containsKey(name)) {
 			MethodDescription methodDescription = methods.get(name);
-			return new RemoteIntegratorOperation(name, methodDescription.getParameters());
+			return new RemoteIntegratorOperation((IntegrationServiceDescription) methodDescription);
 		}
 		return null;
 	}
@@ -52,13 +49,14 @@ public class IntegratorMethodProvider implements MethodProvider {
 	}
 	
 	public static class RemoteIntegratorOperation extends BaseMethodOperation<ExecutionContext> {
-		private String id;
-		private List<ParameterDescription> inputs;
+		private IntegrationServiceDescription description;
 		private String name;
-		public RemoteIntegratorOperation(String id, List<ParameterDescription> inputs) {
-			this.id = id;
-			this.inputs = inputs;
-			this.name = this.id.replaceAll("^.*\\.", "");
+		public RemoteIntegratorOperation(IntegrationServiceDescription description) {
+			this.description = description;
+			this.name = description.getServiceDescription().getInputName();
+			if (this.name == null) {
+				this.name = description.getServiceDescription().getId().replaceAll("^.*\\.", "");
+			}
 		}
 		@Override
 		public void finish() throws ParseException {
@@ -68,6 +66,7 @@ public class IntegratorMethodProvider implements MethodProvider {
 		@Override
 		public Object evaluate(ExecutionContext context) throws EvaluationException {
 			Map<String, Object> parameters = new HashMap<String, Object>();
+			List<ParameterDescription> inputs = description.getParameters();
 			for (int i = 1; i < getParts().size(); i++) {
 				Operation<ExecutionContext> argumentOperation = ((Operation<ExecutionContext>) getParts().get(i).getContent());
 				parameters.put(inputs.get(i - 1).getName(), argumentOperation.evaluate(context));
@@ -82,7 +81,10 @@ public class IntegratorMethodProvider implements MethodProvider {
 					stringify = stringify.substring(0, indexOf) + "</" + name + ">";
 				}
 //				System.out.println("XML INPUT: " + stringify);
-				String response = doHTTP("POST", getEndpoint(getEnvironment()) + "/invoke/" + id, stringify);
+				String response = doHTTP("POST", getEndpoint(getEnvironment()) + "/invoke/" + description.getServiceDescription().getId(), stringify);
+				if (response == null || response.trim().isEmpty()) {
+					return null;
+				}
 //				System.out.println("RESPONSE: " + response);
 				Map<String, ?> object = (Map<String, ?>) XMLMethods.objectify(response);
 				object.remove("@xmlns:xsi");
@@ -95,7 +97,6 @@ public class IntegratorMethodProvider implements MethodProvider {
 		}
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static Map<String, MethodDescription> getMethodMap() {
 		ExecutionEnvironment environment = getEnvironment();
 		if (!methods.containsKey(environment.getName())) {
@@ -107,13 +108,7 @@ public class IntegratorMethodProvider implements MethodProvider {
 					try {
 						ServiceOutput result = doHTTP("POST", endpoint + "/invoke/nabu.utils.reflection.Node.services", "<services><recursive>true</recursive></services>", ServiceOutput.class);
 						for (ServiceDescription description : result.getServices()) {
-							String id = description.getId();
-							int index = id.lastIndexOf('.');
-							List inputs = description.getInputs();
-							List outputs = description.getOutputs();
-							list.put(id, new SimpleMethodDescription(FULL_NAME_ONLY || index < 0 ? null : id.substring(0, index), FULL_NAME_ONLY || index < 0 ? id : id.substring(index + 1), null, 
-								inputs == null ? new ArrayList() : inputs, 
-								outputs == null ? new ArrayList() : outputs));
+							list.put(description.getId(), new IntegrationServiceDescription(description));
 						}
 					}
 					catch (Exception e) {
@@ -169,7 +164,17 @@ public class IntegratorMethodProvider implements MethodProvider {
 		}
 		InputStream stream = connection.getInputStream();
 		try {
-			return new String(IOUtils.toBytes(IOUtils.wrap(stream)), "UTF-8");
+			String result = new String(IOUtils.toBytes(IOUtils.wrap(stream)), "UTF-8");
+			if (connection.getResponseCode() >= 200 && connection.getResponseCode() < 300) {
+				// a remote stacktrace
+				if ("text/plain".equals(connection.getContentType())) {
+					throw new RuntimeException("Remote exception: " + result);
+				}
+				return result;
+			}
+			else {
+				throw new RuntimeException("Remote exception " + connection.getResponseMessage() + ": " + result);
+			}
 		}
 		finally {
 			stream.close();
