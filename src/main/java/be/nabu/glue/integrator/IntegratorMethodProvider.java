@@ -37,27 +37,17 @@ public class IntegratorMethodProvider implements MethodProvider {
 	
 	@Override
 	public Operation<ExecutionContext> resolve(String name) {
-		try {
-			Map<String, MethodDescription> methods = getMethodMap();
-			if (methods.containsKey(name)) {
-				MethodDescription methodDescription = methods.get(name);
-				return new RemoteIntegratorOperation(name, methodDescription.getParameters(), methodDescription.getName());
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
+		Map<String, MethodDescription> methods = getMethodMap();
+		if (methods.containsKey(name)) {
+			MethodDescription methodDescription = methods.get(name);
+			return new RemoteIntegratorOperation(name, methodDescription.getParameters(), methodDescription.getName());
 		}
 		return null;
 	}
 
 	@Override
 	public List<MethodDescription> getAvailableMethods() {
-		try {
-			return new ArrayList<MethodDescription>(getMethodMap().values());
-		}
-		catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		return new ArrayList<MethodDescription>(getMethodMap().values());
 	}
 	
 	public static class RemoteIntegratorOperation extends BaseMethodOperation<ExecutionContext> {
@@ -105,7 +95,7 @@ public class IntegratorMethodProvider implements MethodProvider {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static Map<String, MethodDescription> getMethodMap() throws IOException {
+	private static Map<String, MethodDescription> getMethodMap() {
 		ExecutionEnvironment environment = getEnvironment();
 		if (!methods.containsKey(environment.getName())) {
 			synchronized(methods) {
@@ -113,15 +103,20 @@ public class IntegratorMethodProvider implements MethodProvider {
 					String endpoint = getEndpoint(environment);
 //						DescriptionOutput result = doHTTP("POST", endpoint + "/invoke/nabu.utils.reflection.Node.list", "<list><recursive>true</recursive></list>", DescriptionOutput.class);
 					Map<String, MethodDescription> list = new HashMap<String, MethodDescription>();
-					ServiceOutput result = doHTTP("POST", endpoint + "/invoke/nabu.utils.reflection.Node.services", "<services><recursive>true</recursive></services>", ServiceOutput.class);
-					for (ServiceDescription description : result.getServices()) {
-						String id = description.getId();
-						int index = id.lastIndexOf('.');
-						List inputs = description.getInputs();
-						List outputs = description.getOutputs();
-						list.put(id, new SimpleMethodDescription(index < 0 ? null : id.substring(0, index), index < 0 ? id : id.substring(index + 1), null, 
-							inputs == null ? new ArrayList() : inputs, 
-							outputs == null ? new ArrayList() : outputs));
+					try {
+						ServiceOutput result = doHTTP("POST", endpoint + "/invoke/nabu.utils.reflection.Node.services", "<services><recursive>true</recursive></services>", ServiceOutput.class);
+						for (ServiceDescription description : result.getServices()) {
+							String id = description.getId();
+							int index = id.lastIndexOf('.');
+							List inputs = description.getInputs();
+							List outputs = description.getOutputs();
+							list.put(id, new SimpleMethodDescription(index < 0 ? null : id.substring(0, index), index < 0 ? id : id.substring(index + 1), null, 
+								inputs == null ? new ArrayList() : inputs, 
+								outputs == null ? new ArrayList() : outputs));
+						}
+					}
+					catch (Exception e) {
+						// ignore
 					}
 					methods.put(environment.getName(), list);
 				}
@@ -138,9 +133,14 @@ public class IntegratorMethodProvider implements MethodProvider {
 		return endpoint;
 	}
 	
-	private static ExecutionEnvironment getEnvironment() throws IOException {
-		ScriptRuntime runtime = ScriptRuntime.getRuntime();
-		return runtime == null ? new SimpleExecutionEnvironment("local") : runtime.getExecutionContext().getExecutionEnvironment();
+	private static ExecutionEnvironment getEnvironment() {
+		try {
+			ScriptRuntime runtime = ScriptRuntime.getRuntime();
+			return runtime == null ? new SimpleExecutionEnvironment("local") : runtime.getExecutionContext().getExecutionEnvironment();
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
