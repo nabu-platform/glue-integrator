@@ -14,7 +14,6 @@ import java.util.Map;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamSource;
 
 import be.nabu.glue.ScriptRuntime;
