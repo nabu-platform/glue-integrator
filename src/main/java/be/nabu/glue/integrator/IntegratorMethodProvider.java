@@ -34,12 +34,14 @@ public class IntegratorMethodProvider implements MethodProvider {
 
 	private static Map<String, Map<String, MethodDescription>> methods = new HashMap<String, Map<String, MethodDescription>>();
 	
+	public static final boolean FULL_NAME_ONLY = Boolean.parseBoolean(System.getProperty("glue.integrator.fullNameOnly", "true"));
+	
 	@Override
 	public Operation<ExecutionContext> resolve(String name) {
 		Map<String, MethodDescription> methods = getMethodMap();
 		if (methods.containsKey(name)) {
 			MethodDescription methodDescription = methods.get(name);
-			return new RemoteIntegratorOperation(name, methodDescription.getParameters(), methodDescription.getName());
+			return new RemoteIntegratorOperation(name, methodDescription.getParameters());
 		}
 		return null;
 	}
@@ -53,10 +55,10 @@ public class IntegratorMethodProvider implements MethodProvider {
 		private String id;
 		private List<ParameterDescription> inputs;
 		private String name;
-		public RemoteIntegratorOperation(String id, List<ParameterDescription> inputs, String name) {
+		public RemoteIntegratorOperation(String id, List<ParameterDescription> inputs) {
 			this.id = id;
 			this.inputs = inputs;
-			this.name = name;
+			this.name = this.id.replaceAll("^.*\\.", "");
 		}
 		@Override
 		public void finish() throws ParseException {
@@ -109,7 +111,7 @@ public class IntegratorMethodProvider implements MethodProvider {
 							int index = id.lastIndexOf('.');
 							List inputs = description.getInputs();
 							List outputs = description.getOutputs();
-							list.put(id, new SimpleMethodDescription(index < 0 ? null : id.substring(0, index), index < 0 ? id : id.substring(index + 1), null, 
+							list.put(id, new SimpleMethodDescription(FULL_NAME_ONLY || index < 0 ? null : id.substring(0, index), FULL_NAME_ONLY || index < 0 ? id : id.substring(index + 1), null, 
 								inputs == null ? new ArrayList() : inputs, 
 								outputs == null ? new ArrayList() : outputs));
 						}
