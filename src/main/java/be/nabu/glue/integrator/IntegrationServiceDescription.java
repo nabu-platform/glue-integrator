@@ -1,7 +1,9 @@
 package be.nabu.glue.integrator;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import be.nabu.glue.api.ParameterDescription;
 import be.nabu.glue.impl.SimpleMethodDescription;
 
 public class IntegrationServiceDescription extends SimpleMethodDescription {
@@ -11,8 +13,8 @@ public class IntegrationServiceDescription extends SimpleMethodDescription {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public IntegrationServiceDescription(ServiceDescription description) {
 		super(null, description.getId(), null, 
-				(List) description.getInputs(), 
-				(List) description.getOutputs());
+				description.getInputs() == null ? new ArrayList<ParameterDescription>() : (List) description.getInputs(), 
+				description.getOutputs() == null ? new ArrayList<ParameterDescription>() : (List) description.getOutputs());
 		this.description = description;
 	}
 

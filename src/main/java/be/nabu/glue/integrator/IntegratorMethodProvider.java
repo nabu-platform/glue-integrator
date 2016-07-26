@@ -27,6 +27,7 @@ import be.nabu.glue.xml.XMLMethods;
 import be.nabu.libs.evaluator.EvaluationException;
 import be.nabu.libs.evaluator.api.Operation;
 import be.nabu.libs.evaluator.base.BaseMethodOperation;
+import be.nabu.libs.types.map.MapContent;
 import be.nabu.utils.io.IOUtils;
 
 public class IntegratorMethodProvider implements MethodProvider {
@@ -86,9 +87,9 @@ public class IntegratorMethodProvider implements MethodProvider {
 					return null;
 				}
 //				System.out.println("RESPONSE: " + response);
-				Map<String, ?> object = (Map<String, ?>) XMLMethods.objectify(response);
-				object.remove("@xmlns:xsi");
-				object.remove("@xmlns");
+				MapContent object = (MapContent) XMLMethods.objectify(response);
+				object.getContent().remove("@xmlns:xsi");
+				object.getContent().remove("@xmlns");
 				return object;
 			} 
 			catch (Exception e) {
