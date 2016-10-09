@@ -16,13 +16,13 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.transform.stream.StreamSource;
 
-import be.nabu.glue.ScriptRuntime;
 import be.nabu.glue.api.ExecutionContext;
 import be.nabu.glue.api.ExecutionEnvironment;
 import be.nabu.glue.api.MethodDescription;
-import be.nabu.glue.api.MethodProvider;
 import be.nabu.glue.api.ParameterDescription;
+import be.nabu.glue.core.api.MethodProvider;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
+import be.nabu.glue.utils.ScriptRuntime;
 import be.nabu.glue.xml.XMLMethods;
 import be.nabu.libs.evaluator.EvaluationException;
 import be.nabu.libs.evaluator.api.Operation;
