@@ -20,7 +20,7 @@ import be.nabu.glue.api.ExecutionContext;
 import be.nabu.glue.api.ExecutionEnvironment;
 import be.nabu.glue.api.MethodDescription;
 import be.nabu.glue.api.ParameterDescription;
-import be.nabu.glue.core.api.MethodProvider;
+import be.nabu.glue.core.api.SandboxableMethodProvider;
 import be.nabu.glue.impl.SimpleExecutionEnvironment;
 import be.nabu.glue.utils.ScriptRuntime;
 import be.nabu.glue.xml.XMLMethods;
@@ -30,12 +30,16 @@ import be.nabu.libs.evaluator.base.BaseMethodOperation;
 import be.nabu.libs.types.map.MapContent;
 import be.nabu.utils.io.IOUtils;
 
-public class IntegratorMethodProvider implements MethodProvider {
+public class IntegratorMethodProvider implements SandboxableMethodProvider {
 
+	private boolean sandboxed;
 	private static Map<String, Map<String, MethodDescription>> methods = new HashMap<String, Map<String, MethodDescription>>();
 	
 	@Override
 	public Operation<ExecutionContext> resolve(String name) {
+		if (sandboxed) {
+			return null;
+		}
 		Map<String, MethodDescription> methods = getMethodMap();
 		if (methods.containsKey(name)) {
 			MethodDescription methodDescription = methods.get(name);
@@ -113,6 +117,7 @@ public class IntegratorMethodProvider implements MethodProvider {
 						}
 					}
 					catch (Exception e) {
+						e.printStackTrace();
 						// ignore
 					}
 					methods.put(environment.getName(), list);
@@ -205,4 +210,15 @@ public class IntegratorMethodProvider implements MethodProvider {
 			this.nodes = nodes;
 		}
 	}
+
+	@Override
+	public boolean isSandboxed() {
+		return sandboxed;
+	}
+
+	@Override
+	public void setSandboxed(boolean sandboxed) {
+		this.sandboxed = sandboxed;
+	}
+	
 }
