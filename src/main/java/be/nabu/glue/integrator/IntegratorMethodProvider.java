@@ -117,7 +117,6 @@ public class IntegratorMethodProvider implements SandboxableMethodProvider {
 						}
 					}
 					catch (Exception e) {
-						e.printStackTrace();
 						// ignore
 					}
 					methods.put(environment.getName(), list);
