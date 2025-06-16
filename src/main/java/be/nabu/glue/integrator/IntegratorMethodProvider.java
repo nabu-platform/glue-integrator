@@ -94,7 +94,7 @@ public class IntegratorMethodProvider implements SandboxableMethodProvider {
 				parameters.put(inputs.get(i - 1).getName(), argumentOperation.evaluate(context));
 			}
 			try {
-				String stringify = XMLMethods.stringify(parameters);
+				String stringify = XMLMethods.stringify(parameters, null);
 				int indexOf = stringify.indexOf("<anonymous");
 				stringify = "<" + name + stringify.substring(indexOf + "<anonymous".length());
 				indexOf = stringify.lastIndexOf("</anonymous>");
